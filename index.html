@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>G検定 高速検索カンペ（サマリ一覧＆ジャンプ機能付き）</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-hover: #26354d;
+      --surface-elevated: #334155;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-bg: rgba(56, 189, 248, 0.12);
+      --trap-bg: rgba(239, 68, 68, 0.12);
+      --trap-border: rgba(239, 68, 68, 0.4);
+      --trap-text: #fca5a5;
+      --mark-bg: #fde047;
+      --mark-text: #0f172a;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding-bottom: 80px;
+    }
+
+    /* Sticky Top Search Header */
+    .sticky-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .header-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .app-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text);
+    }
+
+    .app-title span.badge {
+      font-size: 0.75rem;
+      background: var(--accent-bg);
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .btn {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-weight: 600;
+    }
+
+    .btn:hover {
+      background: var(--surface-elevated);
+      border-color: var(--accent);
+    }
+
+    .btn-primary {
+      background: #0284c7;
+      border-color: #38bdf8;
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #0369a1;
+    }
+
+    /* Search Input Box */
+    .search-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .search-box-wrap {
+      position: relative;
+      flex: 1;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--accent);
+      font-size: 1.1rem;
+      pointer-events: none;
+    }
+
+    #searchInput {
+      width: 100%;
+      padding: 11px 110px 11px 42px;
+      font-size: 1rem;
+      background: #090d16;
+      color: var(--text);
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    #searchInput:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+    }
+
+    .search-RightControls {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .clear-btn {
+      background: var(--surface-elevated);
+      color: var(--text-muted);
+      border: none;
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      display: none;
+    }
+
+    .clear-btn:hover {
+      color: var(--text);
+      background: #475569;
+    }
+
+    .kbd-hint {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+
+    /* Category Filter Pills */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+      padding-bottom: 2px;
+    }
+
+    .filter-pill {
+      background: var(--surface);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      padding: 4px 11px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+      font-weight: 600;
+    }
+
+    .filter-pill:hover {
+      color: var(--text);
+      background: var(--surface-hover);
+    }
+
+    .filter-pill.active {
+      background: var(--accent);
+      color: #0f172a;
+      border-color: var(--accent);
+    }
+
+    /* Main Container */
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 18px 20px;
+    }
+
+    /* =====================================================
+       SEARCH SUMMARY PANEL (検索結果サマリ一覧 -> ジャンプ)
+       ===================================================== */
+    .summary-panel {
+      background: #131c31;
+      border: 2px solid #0284c7;
+      border-radius: 12px;
+      margin-bottom: 28px;
+      overflow: hidden;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.45);
+    }
+
+    .summary-panel-header {
+      background: linear-gradient(90deg, rgba(2, 132, 199, 0.25), rgba(30, 41, 59, 0.9));
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .summary-panel-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #e0f2fe;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .summary-count {
+      background: var(--accent);
+      color: #0f172a;
+      font-weight: 800;
+      padding: 1px 8px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+    }
+
+    .summary-help {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .summary-list {
+      max-height: 420px;
+      overflow-y: auto;
+      divide-y: 1px solid var(--border);
+    }
+
+    .summary-item {
+      display: grid;
+      grid-template-columns: 280px 1fr auto;
+      gap: 14px;
+      padding: 11px 16px;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.6);
+      cursor: pointer;
+      transition: background 0.12s;
+      align-items: start;
+    }
+
+    @media (max-width: 820px) {
+      .summary-item {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+    }
+
+    .summary-item:last-child {
+      border-bottom: none;
+    }
+
+    .summary-item:hover,
+    .summary-item.kb-active {
+      background: rgba(56, 189, 248, 0.12);
+    }
+
+    .summary-left {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .cat-badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 4px;
+      color: #fff;
+      width: fit-content;
+    }
+
+    .summary-term {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #f8fafc;
+      line-height: 1.35;
+    }
+
+    .summary-aliases {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .summary-middle {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.88rem;
+    }
+
+    .summary-point {
+      color: #e2e8f0;
+    }
+
+    .summary-trap-preview {
+      font-size: 0.8rem;
+      color: var(--trap-text);
+      background: rgba(239, 68, 68, 0.1);
+      border-left: 3px solid #ef4444;
+      padding: 2px 8px;
+      border-radius: 0 4px 4px 0;
+    }
+
+    .summary-snippet {
+      font-size: 0.78rem;
+      color: #cbd5e1;
+      background: rgba(15, 23, 42, 0.65);
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: 1px dashed var(--border);
+    }
+
+    .summary-jump-btn {
+      align-self: center;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+
+    .summary-item:hover .summary-jump-btn,
+    .summary-item.kb-active .summary-jump-btn {
+      background: var(--accent);
+      color: #0f172a;
+    }
+
+    /* Highlighted search keyword */
+    mark {
+      background-color: var(--mark-bg);
+      color: var(--mark-text);
+      padding: 0 3px;
+      border-radius: 3px;
+      font-weight: 700;
+    }
+
+    /* Section Headings */
+    .section-heading {
+      font-size: 1.15rem;
+      font-weight: 800;
+      margin: 26px 0 14px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #e2e8f0;
+    }
+
+    /* Comparison Matrices */
+    .matrix-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      margin-bottom: 32px;
+    }
+
+    .matrix-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      scroll-margin-top: 150px;
+      transition: box-shadow 0.3s, border-color 0.3s;
+    }
+
+    .matrix-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .matrix-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #38bdf8;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table.comp-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.86rem;
+    }
+
+    table.comp-table th,
+    table.comp-table td {
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    table.comp-table th {
+      background: #0f172a;
+      color: #38bdf8;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    table.comp-table tr:nth-child(even) td {
+      background: rgba(15, 23, 42, 0.35);
+    }
+
+    table.comp-table td:first-child {
+      font-weight: 700;
+      color: #f1f5f9;
+      white-space: nowrap;
+      background: rgba(15, 23, 42, 0.55);
+    }
+
+    /* Detailed Cards Grid */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(540px, 1fr));
+      gap: 16px;
+    }
+
+    @media (max-width: 640px) {
+      .cards-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .detail-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      scroll-margin-top: 150px;
+      transition: transform 0.2s, border-color 0.3s, box-shadow 0.3s;
+    }
+
+    /* Jump Target Flash Animation */
+    @keyframes targetPulse {
+      0% {
+        border-color: #fde047;
+        box-shadow: 0 0 0 4px rgba(253, 224, 71, 0.45), 0 0 30px rgba(56, 189, 248, 0.5);
+        transform: scale(1.01);
+      }
+      70% {
+        border-color: #38bdf8;
+        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.3);
+      }
+      100% {
+        border-color: var(--border);
+        box-shadow: none;
+        transform: scale(1);
+      }
+    }
+
+    .jump-highlight {
+      animation: targetPulse 2.4s ease-out;
+      border-color: #fde047 !important;
+    }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .card-title {
+      font-size: 1.08rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .card-aliases {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .card-summary-box {
+      background: rgba(56, 189, 248, 0.1);
+      border-left: 4px solid var(--accent);
+      padding: 8px 12px;
+      border-radius: 0 6px 6px 0;
+      font-weight: 700;
+      font-size: 0.92rem;
+      color: #f0f9ff;
+    }
+
+    .card-trap-box {
+      background: var(--trap-bg);
+      border: 1px solid var(--trap-border);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.86rem;
+      color: var(--trap-text);
+    }
+
+    .card-details {
+      font-size: 0.87rem;
+      color: #cbd5e1;
+      white-space: pre-line;
+      line-height: 1.65;
+      background: rgba(15, 23, 42, 0.5);
+      padding: 10px 12px;
+      border-radius: 6px;
+    }
+
+    /* Visual Diagram & Mini-Table Box inside Detail Cards */
+    .card-visual-box {
+      background: #0b1120;
+      border: 1px solid #1e3a8a;
+      border-radius: 8px;
+      padding: 10px 12px;
+      overflow-x: auto;
+    }
+
+    .vis-title {
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: #7dd3fc;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+      padding-bottom: 4px;
+    }
+
+    .vis-svg-wrap {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    .vis-svg {
+      width: 100%;
+      height: auto;
+      min-width: 480px;
+      display: block;
+    }
+
+    table.vis-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+
+    table.vis-table th,
+    table.vis-table td {
+      border: 1px solid #334155;
+      padding: 6px 9px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    table.vis-table th {
+      background: #172554;
+      color: #93c5fd;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    table.vis-table tr:nth-child(even) td {
+      background: rgba(30, 41, 59, 0.45);
+    }
+
+    table.vis-table code {
+      background: rgba(56, 189, 248, 0.14);
+      color: #e0f2fe;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-family: Consolas, Monaco, monospace;
+      font-size: 0.78rem;
+    }
+
+    .vis-tag {
+      display: inline-block;
+      padding: 1px 7px;
+      border-radius: 4px;
+      font-weight: 800;
+      font-size: 0.74rem;
+    }
+    .vis-tag-slate { background: #475569; color: #fff; }
+    .vis-tag-blue { background: #0284c7; color: #fff; }
+    .vis-tag-amber { background: #d97706; color: #fff; }
+    .vis-tag-emerald { background: #059669; color: #fff; }
+
+    .vis-hl-cyan { color: #38bdf8; }
+    .vis-hl-amber { color: #fde047; }
+    .vis-hl-emerald { color: #6ee7b7; }
+    .vis-hl-rose { color: #fda4af; }
+
+    .vis-flow {
+      display: flex;
+      align-items: stretch;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+
+    .vis-flow-step {
+      flex: 1;
+      min-width: 110px;
+      background: #162033;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 7px 9px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .vis-flow-num {
+      font-size: 0.66rem;
+      font-weight: 800;
+      color: #38bdf8;
+      letter-spacing: 0.04em;
+    }
+
+    .vis-flow-head {
+      font-size: 0.8rem;
+      font-weight: 800;
+      color: #fde047;
+    }
+
+    .vis-flow-desc {
+      font-size: 0.74rem;
+      color: #cbd5e1;
+      line-height: 1.38;
+    }
+
+    .vis-flow-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #38bdf8;
+      font-weight: 900;
+      font-size: 1rem;
+      padding: 0 2px;
+    }
+
+    .vis-formula-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 8px;
+    }
+
+    .vis-formula-card {
+      background: #162033;
+      border: 1px solid #0284c7;
+      border-radius: 6px;
+      padding: 8px 10px;
+    }
+
+    .vis-formula-head {
+      font-size: 0.76rem;
+      font-weight: 800;
+      color: #38bdf8;
+      margin-bottom: 4px;
+    }
+
+    .vis-formula-eq {
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: #fde047;
+      background: #090d16;
+      padding: 5px 8px;
+      border-radius: 4px;
+      margin-bottom: 4px;
+      font-family: Consolas, Monaco, monospace;
+    }
+
+    .vis-formula-sub {
+      font-size: 0.74rem;
+      color: #cbd5e1;
+    }
+
+    .vis-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 0.68rem;
+      font-weight: 800;
+      background: rgba(16, 185, 129, 0.18);
+      color: #6ee7b7;
+      border: 1px solid rgba(16, 185, 129, 0.45);
+      padding: 1px 7px;
+      border-radius: 999px;
+    }
+
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: auto;
+      padding-top: 4px;
+    }
+
+    .tag-list {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .tag-chip {
+      font-size: 0.73rem;
+      background: #0f172a;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      padding: 2px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .tag-chip:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    /* Floating Back to Summary Button */
+    #backToSummaryBtn {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #0284c7;
+      color: #fff;
+      border: 2px solid #7dd3fc;
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 0.88rem;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+      z-index: 95;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.15s, background 0.15s;
+    }
+
+    #backToSummaryBtn:hover {
+      background: #0369a1;
+      transform: translateY(-2px);
+    }
+
+    /* Modal for Adding Custom Item */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 16px;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      max-width: 600px;
+      width: 100%;
+      padding: 20px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal h3 {
+      margin-bottom: 14px;
+      font-size: 1.1rem;
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: #cbd5e1;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 8px 10px;
+      background: #090d16;
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-family: inherit;
+    }
+
+    .form-group textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 32px;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+  <!-- Global SVG Marker Definitions for Diagrams -->
+  <svg style="width:0;height:0;position:absolute;pointer-events:none;" aria-hidden="true">
+    <defs>
+      <marker id="arrow-ch1" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 1 L 10 5 L 0 9 z" fill="#94a3b8"/>
+      </marker>
+    </defs>
+  </svg>
+
+  <!-- Sticky Header -->
+  <header class="sticky-header" id="topHeader">
+    <div class="header-inner">
+      <div class="top-bar">
+        <div class="app-title">
+          ⚡ G検定 高速検索カンペ
+          <span class="badge">最新シラバス対応・サマリジャンプ式</span>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-primary" id="openAddModalBtn">＋ 自分のカンペ項目を追加</button>
+          <button class="btn" id="exportBtn" title="追加した項目をJSON保存">📥 エクスポート</button>
+        </div>
+      </div>
+
+      <div class="search-row">
+        <div class="search-box-wrap">
+          <span class="search-icon">🔍</span>
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="キーワード検索（スペース区切りでAND検索：例「著作権 30条」「CNN 計算」「強化学習 方策」など）"
+            autocomplete="off"
+            autofocus
+          />
+          <div class="search-RightControls">
+            <button class="clear-btn" id="clearSearchBtn">✕ クリア</button>
+            <span class="kbd-hint" title="「/」キーまたはEscキーで検索窓にフォーカス">/ キー</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-bar" id="categoryFilterBar">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container">
+
+    <!-- 1. SEARCH RESULTS SUMMARY PANEL (検索結果サマリ一覧 -> クリックで詳細へジャンプ) -->
+    <section class="summary-panel" id="summaryPanel">
+      <div class="summary-panel-header">
+        <div class="summary-panel-title">
+          📋 検索結果サマリ一覧（見たい項目の行をクリックすると詳細位置へジャンプします）
+          <span class="summary-count" id="summaryCountBadge">0件</span>
+        </div>
+        <div class="summary-help">
+          💡 <strong>↑↓キー</strong>で選択・<strong>Enter</strong>で詳細へジャンプ ／ <strong>/ キー</strong>でいつでも検索窓へ戻れます
+        </div>
+      </div>
+      <div class="summary-list" id="summaryList">
+        <!-- Dynamically populated summary rows -->
+      </div>
+    </section>
+
+    <!-- 2. QUICK COMPARISON MATRICES -->
+    <div id="matricesSectionWrap">
+      <div class="section-heading">
+        <span>📊 頻出比較マトリクス（横断整理表）</span>
+        <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">試験で最も狙われる対比表</span>
+      </div>
+      <div class="matrix-grid" id="matrixGrid">
+        <!-- Dynamically populated matrices -->
+      </div>
+    </div>
+
+    <!-- 3. DETAILED CARDS -->
+    <div id="cardsSectionWrap">
+      <div class="section-heading">
+        <span>📖 分野別 詳細解説＆ひっかけ対策カード</span>
+        <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;" id="detailCountText"></span>
+      </div>
+      <div class="cards-grid" id="cardsGrid">
+        <!-- Dynamically populated detail cards -->
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Floating Back to Search Summary Button -->
+  <button id="backToSummaryBtn" title="検索サマリ一覧と検索ボックスへ戻る（ショートカット: / キー）">
+    ↑ 検索サマリへ戻る ( / )
+  </button>
+
+  <!-- Modal for adding custom cheat sheet item -->
+  <div class="modal-backdrop" id="addModalBackdrop">
+    <div class="modal">
+      <h3>＋ カンペ項目の新規追加（ブラウザに自動保存されます）</h3>
+      <form id="addItemForm">
+        <div class="form-group">
+          <label>カテゴリ（章）</label>
+          <select id="formCategory" required></select>
+        </div>
+        <div class="form-group">
+          <label>用語名・テーマ名 *</label>
+          <input type="text" id="formTerm" placeholder="例：Chinchillaスケーリング則" required />
+        </div>
+        <div class="form-group">
+          <label>別名・関連キーワード（カンマ区切り）</label>
+          <input type="text" id="formAliases" placeholder="例：Hoffmannら, DeepMind, トークン数, 最適計算量" />
+        </div>
+        <div class="form-group">
+          <label>⚡ 1行サマリ（検索サマリ一覧に表示される即答ポイント） *</label>
+          <input type="text" id="formSummary" placeholder="例：モデルサイズを2倍にするなら学習データ（トークン数）も2倍にすべきという法則" required />
+        </div>
+        <div class="form-group">
+          <label>🚨 ひっかけ注意・対比ポイント（任意）</label>
+          <input type="text" id="formTrap" placeholder="例：Kaplanらのスケーリング則よりも学習データ量の重要性を高く評価した点に注意" />
+        </div>
+        <div class="form-group">
+          <label>詳細解説・数式・メモ *</label>
+          <textarea id="formDetails" placeholder="詳細な解説や箇条書きメモを入力..." required></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn" id="closeAddModalBtn">キャンセル</button>
+          <button type="submit" class="btn btn-primary">保存してカンペに追加</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="diagrams.js"></script>
+  <script>
+    (function () {
+      const STORAGE_KEY = "gkentei_custom_items_v1";
+
+      // Load custom items from localStorage
+      function loadCustomItems() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          return raw ? JSON.parse(raw) : [];
+        } catch (e) {
+          return [];
+        }
+      }
+
+      function saveCustomItems(items) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      }
+
+      let customItems = loadCustomItems();
+      let activeCategory = "all";
+      let kbSelectedIndex = -1;
+
+      const categoriesMap = {};
+      window.GKENTEI_CATEGORIES.forEach((c) => {
+        categoriesMap[c.id] = c;
+      });
+
+      const searchInput = document.getElementById("searchInput");
+      const clearSearchBtn = document.getElementById("clearSearchBtn");
+      const categoryFilterBar = document.getElementById("categoryFilterBar");
+      const summaryList = document.getElementById("summaryList");
+      const summaryCountBadge = document.getElementById("summaryCountBadge");
+      const matrixGrid = document.getElementById("matrixGrid");
+      const cardsGrid = document.getElementById("cardsGrid");
+      const matricesSectionWrap = document.getElementById("matricesSectionWrap");
+      const detailCountText = document.getElementById("detailCountText");
+      const backToSummaryBtn = document.getElementById("backToSummaryBtn");
+
+      // Escape HTML
+      function escapeHtml(str) {
+        if (!str) return "";
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      // Highlight matched keywords
+      function highlightText(text, tokens) {
+        const escaped = escapeHtml(text);
+        if (!tokens || tokens.length === 0) return escaped;
+        let result = escaped;
+        tokens.forEach((token) => {
+          if (!token) return;
+          const safeToken = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const regex = new RegExp(`(${safeToken})`, "gi");
+          result = result.replace(regex, "<mark>$1</mark>");
+        });
+        return result;
+      }
+
+      // Extract a contextual snippet around the first matched keyword in long text
+      function extractMatchSnippet(fullText, tokens) {
+        if (!tokens || tokens.length === 0 || !fullText) return "";
+        const lower = fullText.toLowerCase();
+        for (const t of tokens) {
+          const idx = lower.indexOf(t.toLowerCase());
+          if (idx !== -1) {
+            const start = Math.max(0, idx - 30);
+            const end = Math.min(fullText.length, idx + t.length + 55);
+            const prefix = start > 0 ? "…" : "";
+            const suffix = end < fullText.length ? "…" : "";
+            const slice = fullText.slice(start, end).replace(/\n+/g, " ");
+            return prefix + highlightText(slice, tokens) + suffix;
+          }
+        }
+        return "";
+      }
+
+      // Render category filter bar
+      function renderFilterBar() {
+        const diagCount = window.GKENTEI_DIAGRAMS ? Object.keys(window.GKENTEI_DIAGRAMS).length : 0;
+        const pills = [
+          { id: "all", label: "すべて表示" },
+          { id: "with-diagrams", label: `🖼️ 図表つきカードのみ (${diagCount}件)` },
+          { id: "matrices", label: "📊 比較マトリクスのみ" },
+          ...window.GKENTEI_CATEGORIES.map((c) => ({ id: c.id, label: c.shortName }))
+        ];
+
+        categoryFilterBar.innerHTML = pills
+          .map(
+            (p) =>
+              `<button class="filter-pill ${activeCategory === p.id ? "active" : ""}" data-cat="${p.id}">${escapeHtml(
+                p.label
+              )}</button>`
+          )
+          .join("");
+
+        categoryFilterBar.querySelectorAll(".filter-pill").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            activeCategory = btn.getAttribute("data-cat");
+            kbSelectedIndex = -1;
+            renderFilterBar();
+            renderAll();
+          });
+        });
+      }
+
+      // Jump to target card or matrix with smooth scroll and flash animation
+      window.jumpToDetail = function (elementId) {
+        const target = document.getElementById(elementId);
+        if (!target) return;
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        target.classList.remove("jump-highlight");
+        void target.offsetWidth; // trigger reflow
+        target.classList.add("jump-highlight");
+      };
+
+      // Quick tag search
+      window.searchByTag = function (tagText) {
+        searchInput.value = tagText;
+        kbSelectedIndex = -1;
+        renderAll();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        searchInput.focus();
+      };
+
+      // Delete custom item
+      window.deleteCustomItem = function (id) {
+        if (!confirm("この追加項目を削除しますか？")) return;
+        customItems = customItems.filter((item) => item.id !== id);
+        saveCustomItems(customItems);
+        renderAll();
+      };
+
+      function renderAll() {
+        const rawQuery = searchInput.value.trim();
+        clearSearchBtn.style.display = rawQuery.length > 0 ? "inline-block" : "none";
+
+        const tokens = rawQuery
+          .split(/[\s　]+/)
+          .filter(Boolean);
+
+        const allItems = [...customItems, ...window.GKENTEI_ITEMS];
+        const allMatrices = window.GKENTEI_MATRICES || [];
+        const allDiagrams = window.GKENTEI_DIAGRAMS || {};
+
+        // Filter matrices
+        const filteredMatrices = allMatrices.filter((m) => {
+          if (activeCategory === "with-diagrams") return false;
+          if (activeCategory !== "all" && activeCategory !== "matrices" && m.category !== activeCategory) {
+            return false;
+          }
+          if (tokens.length === 0) return true;
+          const haystack = [
+            m.title,
+            m.summary,
+            ...(m.keywords || []),
+            ...(m.headers || []),
+            ...(m.rows || []).map((r) => r.join(" "))
+          ]
+            .join(" ")
+            .toLowerCase();
+          return tokens.every((t) => haystack.includes(t.toLowerCase()));
+        });
+
+        // Filter detail items
+        const filteredItems =
+          activeCategory === "matrices"
+            ? []
+            : allItems.filter((item) => {
+                if (activeCategory === "with-diagrams" && !allDiagrams[item.id]) {
+                  return false;
+                }
+                if (activeCategory !== "all" && activeCategory !== "with-diagrams" && item.category !== activeCategory) {
+                  return false;
+                }
+                if (tokens.length === 0) return true;
+                const diagPlainText = allDiagrams[item.id]
+                  ? allDiagrams[item.id].replace(/<[^>]+>/g, " ")
+                  : "";
+                const haystack = [
+                  item.term,
+                  ...(item.aliases || []),
+                  item.summary,
+                  item.trap || "",
+                  item.details || "",
+                  diagPlainText,
+                  ...(item.tags || [])
+                ]
+                  .join(" ")
+                  .toLowerCase();
+                return tokens.every((t) => haystack.includes(t.toLowerCase()));
+              });
+
+        // 1. Render Summary List (combines matching matrices and matching items)
+        const summaryEntries = [];
+
+        filteredMatrices.forEach((m) => {
+          const cat = categoriesMap[m.category] || { shortName: "比較表", color: "#0284c7" };
+          const tableText = (m.rows || []).map((r) => r.join(" / ")).join(" | ");
+          const snippet = tokens.length > 0 ? extractMatchSnippet(tableText, tokens) : "";
+          summaryEntries.push({
+            targetId: m.id,
+            badgeText: "📊 比較表・" + cat.shortName,
+            badgeColor: "#0284c7",
+            titleHtml: highlightText(m.title, tokens),
+            aliasesHtml: highlightText((m.keywords || []).slice(0, 6).join(", "), tokens),
+            summaryHtml: highlightText(m.summary, tokens),
+            trapHtml: "",
+            snippetHtml: snippet
+          });
+        });
+
+        filteredItems.forEach((item) => {
+          const cat = categoriesMap[item.category] || { shortName: "その他", color: "#64748b" };
+          // Show snippet from details if query matches in details
+          const snippet = tokens.length > 0 ? extractMatchSnippet(item.details, tokens) : "";
+          const hasDiagram = Boolean(allDiagrams[item.id]);
+          summaryEntries.push({
+            targetId: item.id,
+            badgeText: cat.shortName,
+            badgeColor: cat.color,
+            hasDiagram,
+            titleHtml: highlightText(item.term, tokens),
+            aliasesHtml: highlightText((item.aliases || []).join(" / "), tokens),
+            summaryHtml: highlightText(item.summary, tokens),
+            trapHtml: item.trap ? highlightText(item.trap, tokens) : "",
+            snippetHtml: snippet
+          });
+        });
+
+        summaryCountBadge.textContent = `${summaryEntries.length}件`;
+
+        if (summaryEntries.length === 0) {
+          summaryList.innerHTML = `<div class="empty-state">該当する項目が見つかりませんでした。検索ワードを短くするか、「＋ 自分のカンペ項目を追加」から登録してください。</div>`;
+        } else {
+          summaryList.innerHTML = summaryEntries
+            .map(
+              (entry, idx) => `
+              <div class="summary-item ${idx === kbSelectedIndex ? "kb-active" : ""}" onclick="jumpToDetail('${
+                entry.targetId
+              }')" data-idx="${idx}" data-target="${entry.targetId}">
+                <div class="summary-left">
+                  <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                    <span class="cat-badge" style="background:${entry.badgeColor}">${escapeHtml(entry.badgeText)}</span>
+                    ${entry.hasDiagram ? `<span class="vis-badge">📊 図表あり</span>` : ""}
+                  </div>
+                  <div class="summary-term">${entry.titleHtml}</div>
+                  ${entry.aliasesHtml ? `<div class="summary-aliases">${entry.aliasesHtml}</div>` : ""}
+                </div>
+                <div class="summary-middle">
+                  <div class="summary-point">⚡ ${entry.summaryHtml}</div>
+                  ${
+                    entry.trapHtml
+                      ? `<div class="summary-trap-preview">🚨 ひっかけ注意: ${entry.trapHtml}</div>`
+                      : ""
+                  }
+                  ${
+                    entry.snippetHtml
+                      ? `<div class="summary-snippet">🔎 本文抜粋: ${entry.snippetHtml}</div>`
+                      : ""
+                  }
+                </div>
+                <div class="summary-jump-btn">⤵ 詳細へ移動</div>
+              </div>
+            `
+            )
+            .join("");
+        }
+
+        // 2. Render Matrices Section
+        if (filteredMatrices.length === 0) {
+          matricesSectionWrap.style.display = "none";
+        } else {
+          matricesSectionWrap.style.display = "block";
+          matrixGrid.innerHTML = filteredMatrices
+            .map((m) => {
+              const cat = categoriesMap[m.category] || { shortName: "比較表", color: "#0284c7" };
+              return `
+                <article class="matrix-card" id="${m.id}">
+                  <div class="matrix-header">
+                    <div class="matrix-title">${highlightText(m.title, tokens)}</div>
+                    <span class="cat-badge" style="background:${cat.color}">${escapeHtml(cat.shortName)}</span>
+                  </div>
+                  <div class="table-wrap">
+                    <table class="comp-table">
+                      <thead>
+                        <tr>
+                          ${m.headers.map((h) => `<th>${highlightText(h, tokens)}</th>`).join("")}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${m.rows
+                          .map(
+                            (row) =>
+                              `<tr>${row.map((cell) => `<td>${highlightText(cell, tokens)}</td>`).join("")}</tr>`
+                          )
+                          .join("")}
+                      </tbody>
+                    </table>
+                  </div>
+                </article>
+              `;
+            })
+            .join("");
+        }
+
+        // 3. Render Detailed Cards Section
+        detailCountText.textContent = `${filteredItems.length}件表示中`;
+        if (filteredItems.length === 0) {
+          cardsGrid.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1;">表示する詳細カードがありません。</div>`;
+        } else {
+          cardsGrid.innerHTML = filteredItems
+            .map((item) => {
+              const cat = categoriesMap[item.category] || { shortName: "その他", color: "#64748b" };
+              const isCustom = String(item.id).startsWith("custom-");
+              const diagHtml = allDiagrams[item.id] || "";
+              return `
+                <article class="detail-card" id="${item.id}">
+                  <div class="card-top">
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                      <span class="cat-badge" style="background:${cat.color}">${escapeHtml(cat.name)}</span>
+                      ${diagHtml ? `<span class="vis-badge">📊 図表・イラスト解説付き</span>` : ""}
+                    </div>
+                    ${
+                      isCustom
+                        ? `<button class="btn" style="padding:2px 8px;font-size:0.72rem;color:#fca5a5;" onclick="deleteCustomItem('${item.id}')">削除</button>`
+                        : ""
+                    }
+                  </div>
+                  <div>
+                    <h2 class="card-title">${highlightText(item.term, tokens)}</h2>
+                    ${
+                      item.aliases && item.aliases.length
+                        ? `<div class="card-aliases">別名・関連語：${highlightText(item.aliases.join(" / "), tokens)}</div>`
+                        : ""
+                    }
+                  </div>
+                  <div class="card-summary-box">
+                    ⚡ <strong>要点：</strong>${highlightText(item.summary, tokens)}
+                  </div>
+                  ${
+                    item.trap
+                      ? `<div class="card-trap-box">🚨 <strong>試験のひっかけ・対比注意：</strong><br>${highlightText(
+                          item.trap,
+                          tokens
+                        )}</div>`
+                      : ""
+                  }
+                  ${diagHtml ? `<div class="card-visual-box">${diagHtml}</div>` : ""}
+                  <div class="card-details">${highlightText(item.details, tokens)}</div>
+                  <div class="card-footer">
+                    <div class="tag-list">
+                      ${(item.tags || [])
+                        .map(
+                          (tag) =>
+                            `<span class="tag-chip" onclick="searchByTag('${escapeHtml(tag)}')">#${escapeHtml(
+                              tag
+                            )}</span>`
+                        )
+                        .join("")}
+                    </div>
+                  </div>
+                </article>
+              `;
+            })
+            .join("");
+        }
+      }
+
+      // Search Input Events
+      searchInput.addEventListener("input", () => {
+        kbSelectedIndex = -1;
+        renderAll();
+      });
+
+      clearSearchBtn.addEventListener("click", () => {
+        searchInput.value = "";
+        kbSelectedIndex = -1;
+        renderAll();
+        searchInput.focus();
+      });
+
+      // Keyboard navigation (/ to focus search, Up/Down/Enter for summary list)
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "/" && document.activeElement !== searchInput && !["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) {
+          e.preventDefault();
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          searchInput.focus();
+          searchInput.select();
+          return;
+        }
+        if (e.key === "Escape") {
+          const modal = document.getElementById("addModalBackdrop");
+          if (modal.classList.contains("open")) {
+            modal.classList.remove("open");
+            return;
+          }
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          searchInput.focus();
+          searchInput.select();
+          return;
+        }
+
+        // Up/Down arrow navigation in summary list when searchInput is focused
+        if (document.activeElement === searchInput) {
+          const items = summaryList.querySelectorAll(".summary-item");
+          if (items.length === 0) return;
+
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            kbSelectedIndex = Math.min(items.length - 1, kbSelectedIndex + 1);
+            updateKbSelection(items);
+          } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            kbSelectedIndex = Math.max(0, kbSelectedIndex - 1);
+            updateKbSelection(items);
+          } else if (e.key === "Enter" && kbSelectedIndex >= 0 && items[kbSelectedIndex]) {
+            e.preventDefault();
+            const targetId = items[kbSelectedIndex].getAttribute("data-target");
+            if (targetId) {
+              window.jumpToDetail(targetId);
+              searchInput.blur();
+            }
+          }
+        }
+      });
+
+      function updateKbSelection(items) {
+        items.forEach((el, i) => {
+          if (i === kbSelectedIndex) {
+            el.classList.add("kb-active");
+            el.scrollIntoView({ block: "nearest" });
+          } else {
+            el.classList.remove("kb-active");
+          }
+        });
+      }
+
+      // Back to Summary Button
+      backToSummaryBtn.addEventListener("click", () => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        setTimeout(() => {
+          searchInput.focus();
+          searchInput.select();
+        }, 250);
+      });
+
+      // Modal Setup
+      const addModalBackdrop = document.getElementById("addModalBackdrop");
+      const openAddModalBtn = document.getElementById("openAddModalBtn");
+      const closeAddModalBtn = document.getElementById("closeAddModalBtn");
+      const addItemForm = document.getElementById("addItemForm");
+      const formCategory = document.getElementById("formCategory");
+
+      formCategory.innerHTML = window.GKENTEI_CATEGORIES.map(
+        (c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`
+      ).join("");
+
+      openAddModalBtn.addEventListener("click", () => {
+        addModalBackdrop.classList.add("open");
+        document.getElementById("formTerm").focus();
+      });
+
+      closeAddModalBtn.addEventListener("click", () => {
+        addModalBackdrop.classList.remove("open");
+      });
+
+      addItemForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const newItem = {
+          id: "custom-" + Date.now(),
+          category: formCategory.value,
+          term: document.getElementById("formTerm").value.trim(),
+          aliases: document
+            .getElementById("formAliases")
+            .value.split(",")
+            .map((s) => s.trim())
+            .filter(Boolean),
+          summary: document.getElementById("formSummary").value.trim(),
+          trap: document.getElementById("formTrap").value.trim(),
+          details: document.getElementById("formDetails").value.trim(),
+          tags: ["自作追加"]
+        };
+        customItems.unshift(newItem);
+        saveCustomItems(customItems);
+        addItemForm.reset();
+        addModalBackdrop.classList.remove("open");
+        renderAll();
+      });
+
+      // Export JSON
+      document.getElementById("exportBtn").addEventListener("click", () => {
+        const exportData = {
+          exportedAt: new Date().toISOString(),
+          customItems,
+          totalItems: customItems.length + window.GKENTEI_ITEMS.length
+        };
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "g-kentei-cheatsheet-backup.json";
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+
+      // Initialize
+      renderFilterBar();
+      renderAll();
+    })();
+  </script>
+</body>
+</html>
